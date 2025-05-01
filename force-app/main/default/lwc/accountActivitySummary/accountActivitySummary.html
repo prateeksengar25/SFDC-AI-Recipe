@@ -1,0 +1,33 @@
+<template>
+    <lightning-card title="Account Activity Summary">
+        <div class="slds-p-around_medium">
+            <lightning-button
+                label="Summarize Activities"
+                variant="brand"
+                onclick={handleSummarize}
+                disabled={isLoading}>
+            </lightning-button>
+            
+            <div if:true={isLoading} class="slds-is-relative slds-p-around_medium">
+                <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+                <p class="slds-text-body_regular slds-p-top_small">Generating summary...</p>
+            </div>
+            
+            <div if:true={error} class="slds-notify slds-notify_alert slds-alert_error" role="alert">
+                <span class="slds-assistive-text">error</span>
+                <h2>{error}</h2>
+            </div>
+            
+            <div if:true={summary} class="slds-p-around_medium">
+                <div class="slds-text-heading_small slds-p-bottom_small">Summary</div>
+                <div class="slds-box slds-theme_default">
+                    <p class="slds-text-body_regular slds-p-around_small">{summary}</p>
+                </div>
+            </div>
+            
+            <div if:true={hasNoContent} class="slds-p-around_medium">
+                <p class="slds-text-body_regular">Click the button above to generate a summary of account activities.</p>
+            </div>
+        </div>
+    </lightning-card>
+</template> 
