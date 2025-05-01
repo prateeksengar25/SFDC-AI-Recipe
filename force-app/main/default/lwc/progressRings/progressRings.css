@@ -1,0 +1,4 @@
+.very-large {
+    transform: scale(3) translate(1em, 1em); /* Example values, adjust as needed */
+    position: absolute; /* Optional, for positioning */
+  }
