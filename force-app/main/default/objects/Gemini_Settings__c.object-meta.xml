@@ -4,14 +4,4 @@
     <enableFeeds>false</enableFeeds>
     <label>Gemini Settings</label>
     <visibility>Protected</visibility>
-    <fields>
-        <fullName>API_Key__c</fullName>
-        <externalId>false</externalId>
-        <label>API Key</label>
-        <length>255</length>
-        <required>true</required>
-        <trackTrending>false</trackTrending>
-        <type>Text</type>
-        <unique>false</unique>
-    </fields>
-</CustomObject> 
+</CustomObject>

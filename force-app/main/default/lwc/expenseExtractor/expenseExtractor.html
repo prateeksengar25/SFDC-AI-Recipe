@@ -1,0 +1,89 @@
+<template>
+    <lightning-card title="Expense Extraction" icon-name="custom:custom18">
+        <div class="slds-p-around_medium">
+            <!-- File Upload Section -->
+            <div class="slds-p-around_medium">
+                <lightning-file-upload
+                    label="Upload Receipt"
+                    name="fileUploader"
+                    accept={acceptedFormats}
+                    record-id={recordId}
+                    onuploadfinished={handleUploadFinished}
+                    multiple="false">
+                </lightning-file-upload>
+            </div>
+
+            <!-- Loading Spinner -->
+            <template if:true={isLoading}>
+                <div class="slds-is-relative slds-p-around_medium">
+                    <lightning-spinner alternative-text="Processing" size="small"></lightning-spinner>
+                    <p class="slds-text-body_regular slds-p-top_small">Extracting expense details...</p>
+                </div>
+            </template>
+
+            <!-- Error Message -->
+            <template if:true={error}>
+                <div class="slds-notify slds-notify_alert slds-alert_error" role="alert">
+                    <span class="slds-assistive-text">error</span>
+                    <h2>{error}</h2>
+                </div>
+            </template>
+
+            <!-- Extracted Data Section -->
+            <template if:true={extractedData}>
+                <div class="slds-p-around_medium">
+                    <div class="slds-text-heading_small slds-p-bottom_small">Extracted Details</div>
+                    <div class="slds-box slds-theme_default">
+                        <div class="slds-grid slds-wrap">
+                            <div class="slds-col slds-size_1-of-2 slds-p-around_small">
+                                <lightning-input
+                                    label="Vendor Name"
+                                    value={extractedData.vendorName}
+                                    readonly>
+                                </lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2 slds-p-around_small">
+                                <lightning-input
+                                    label="Price"
+                                    value={extractedData.price}
+                                    readonly>
+                                </lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2 slds-p-around_small">
+                                <lightning-input
+                                    type="date"
+                                    label="Date of Expense"
+                                    value={extractedData.expenseDate}
+                                    readonly>
+                                </lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-p-around_small">
+                                <lightning-textarea
+                                    label="Expense Detail"
+                                    value={extractedData.expenseDetail}
+                                    readonly>
+                                </lightning-textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="slds-p-around_medium slds-text-align_right">
+                    <lightning-button
+                        label="Accept"
+                        variant="brand"
+                        onclick={handleAccept}
+                        disabled={isLoading}>
+                    </lightning-button>
+                    <lightning-button
+                        label="Reject"
+                        variant="destructive"
+                        onclick={handleReject}
+                        disabled={isLoading}>
+                    </lightning-button>
+                </div>
+            </template>
+        </div>
+    </lightning-card>
+</template> 
