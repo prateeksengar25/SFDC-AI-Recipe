@@ -8,6 +8,7 @@ export default class ExpenseExtractor extends LightningElement {
     @track isLoading = false;
     @track error;
     @track extractedData;
+    @track contentVersionId; // Store the contentVersionId
     
     // Accepted file formats for upload
     acceptedFormats = ['.pdf', '.png', '.jpg', '.jpeg'];
@@ -22,9 +23,12 @@ export default class ExpenseExtractor extends LightningElement {
             this.isLoading = true;
             this.error = null;
             
+            // Store the contentVersionId
+            this.contentVersionId = uploadedFiles[0].contentVersionId;
+            
             // Create a simple object with just the required fields
             const params = {
-                contentVersionId: uploadedFiles[0].contentVersionId,
+                contentVersionId: this.contentVersionId,
                 expenseReportId: this.recordId
             };
             
@@ -61,11 +65,13 @@ export default class ExpenseExtractor extends LightningElement {
             
             console.log('Starting handleAccept');
             console.log('Record ID:', this.recordId);
+            console.log('Content Version ID:', this.contentVersionId);
             console.log('Extracted Data:', JSON.stringify(this.extractedData));
             
-            if (!this.extractedData || !this.recordId) {
+            if (!this.extractedData || !this.recordId || !this.contentVersionId) {
                 const errorMsg = 'Missing required data: ' + 
                     (!this.recordId ? 'recordId is missing. ' : '') +
+                    (!this.contentVersionId ? 'contentVersionId is missing. ' : '') +
                     (!this.extractedData ? 'extractedData is missing.' : '');
                 console.error(errorMsg);
                 this.showToast('Error', errorMsg, 'error');
@@ -75,6 +81,7 @@ export default class ExpenseExtractor extends LightningElement {
             // Create the parameters object
             const params = {
                 expenseReportId: this.recordId,
+                contentVersionId: this.contentVersionId,
                 extractedData: this.extractedData
             };
 
@@ -87,6 +94,7 @@ export default class ExpenseExtractor extends LightningElement {
             if (result && result.isSuccess) {
                 this.showToast('Success', result.message || 'Expense line items created successfully', 'success');
                 this.extractedData = null;
+                this.contentVersionId = null;
                 // Refresh the view to show new line items
                 this.dispatchEvent(new CustomEvent('refresh'));
             } else {
@@ -111,6 +119,7 @@ export default class ExpenseExtractor extends LightningElement {
      */
     handleReject() {
         this.extractedData = null;
+        this.contentVersionId = null;
         this.showToast('Info', 'Expense details rejected', 'info');
     }
 
@@ -131,6 +140,7 @@ export default class ExpenseExtractor extends LightningElement {
 
     resetComponent() {
         this.extractedData = null;
+        this.contentVersionId = null;
         this.error = null;
     }
 } 

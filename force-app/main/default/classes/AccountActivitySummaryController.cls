@@ -6,6 +6,16 @@ public with sharing class AccountActivitySummaryController {
     private static final Integer ACTIVITY_LIMIT = 10;
     
     /**
+     * @description Response wrapper class for activity summary
+     */
+    public class ActivitySummaryResponse {
+        @AuraEnabled public String summary;
+        @AuraEnabled public Boolean isSuccess;
+        @AuraEnabled public String errorMessage;
+        @AuraEnabled public Integer statusCode;
+    }
+    
+    /**
      * @description Retrieves recent activities for an Account
      * @param accountId The ID of the Account to get activities for
      * @return List of Activity records sorted by date
@@ -42,12 +52,13 @@ public with sharing class AccountActivitySummaryController {
     /**
      * @description Generates a summary of account activities using the Gemini API
      * @param accountId The ID of the Account to summarize activities for
-     * @return GeminiResponse containing the summary or error information
+     * @return ActivitySummaryResponse containing the summary or error information
      */
     @AuraEnabled
-    public static GeminiService.GeminiResponse generateActivitySummary(Id accountId) {
+    public static ActivitySummaryResponse generateActivitySummary(Id accountId) {
+        ActivitySummaryResponse response = new ActivitySummaryResponse();
+        
         if (accountId == null) {
-            GeminiService.GeminiResponse response = new GeminiService.GeminiResponse();
             response.isSuccess = false;
             response.errorMessage = 'Account ID is required';
             return response;
@@ -56,17 +67,93 @@ public with sharing class AccountActivitySummaryController {
         try {
             List<Activity> activities = getAccountActivities(accountId);
             if (activities.isEmpty()) {
-                GeminiService.GeminiResponse response = new GeminiService.GeminiResponse();
                 response.isSuccess = true;
                 response.summary = 'No activities found for this account.';
                 return response;
             }
-            return GeminiService.generateSummary(activities);
+            
+            // Create the prompt
+            String prompt = createPrompt(activities);
+            
+            // Prepare the request body
+            Map<String, Object> requestBody = new Map<String, Object>{
+                'contents' => new List<Map<String, Object>>{
+                    new Map<String, Object>{
+                        'parts' => new List<Map<String, Object>>{
+                            new Map<String, Object>{
+                                'text' => prompt
+                            }
+                        }
+                    }
+                }
+            };
+            
+            // Call Gemini API
+            Map<String, Object> apiResponse = GeminiService.callGeminiAPI(JSON.serialize(requestBody));
+            Integer statusCode = (Integer)apiResponse.get('statusCode');
+            response.statusCode = statusCode;
+            
+            if (statusCode == 200) {
+                String responseBody = (String)apiResponse.get('body');
+                Map<String, Object> responseMap = (Map<String, Object>)JSON.deserializeUntyped(responseBody);
+                if (responseMap.containsKey('candidates')) {
+                    List<Object> candidates = (List<Object>)responseMap.get('candidates');
+                    if (!candidates.isEmpty()) {
+                        Map<String, Object> candidate = (Map<String, Object>)candidates[0];
+                        Map<String, Object> content = (Map<String, Object>)candidate.get('content');
+                        List<Object> parts = (List<Object>)content.get('parts');
+                        if (!parts.isEmpty()) {
+                            Map<String, Object> part = (Map<String, Object>)parts[0];
+                            response.summary = (String)part.get('text');
+                            response.isSuccess = true;
+                            return response;
+                        }
+                    }
+                }
+                response.isSuccess = false;
+                response.errorMessage = 'Invalid response format from Gemini API';
+            } else {
+                response.isSuccess = false;
+                response.errorMessage = 'Error: ' + statusCode + ' ' + apiResponse.get('status') + '\nResponse: ' + apiResponse.get('body');
+                if (statusCode == 401) {
+                    response.errorMessage += ' - Authentication failed. Please check your API key configuration.';
+                }
+            }
         } catch (Exception e) {
-            GeminiService.GeminiResponse response = new GeminiService.GeminiResponse();
             response.isSuccess = false;
             response.errorMessage = 'Error generating summary: ' + e.getMessage();
-            return response;
         }
+        return response;
+    }
+    
+    /**
+     * @description Creates a prompt for the Gemini API based on activities
+     * @param activities List of activities to include in the prompt
+     * @return Formatted prompt string
+     */
+    private static String createPrompt(List<Activity> activities) {
+        if (activities == null || activities.isEmpty()) {
+            return 'No activities found for this account.';
+        }
+        
+        String prompt = 'Please provide a concise summary of the following account activities. ' +
+                       'Focus on key information and patterns. Format the response in a clear, ' +
+                       'easy-to-read manner. Here are the activities:\n\n';
+        
+        for (Activity activity : activities) {
+            prompt += 'Type: ' + activity.type + '\n';
+            prompt += 'Subject: ' + activity.subject + '\n';
+            prompt += 'Date: ' + activity.activityDate + '\n';
+            prompt += 'Status: ' + activity.status + '\n';
+            if (String.isNotBlank(activity.description)) {
+                prompt += 'Description: ' + activity.description + '\n';
+            }
+            prompt += '---\n';
+        }
+        
+        prompt += '\nPlease provide a comprehensive summary that highlights important patterns, ' +
+                 'key interactions, and any notable information from these activities.';
+        
+        return prompt;
     }
 } 
