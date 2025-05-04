@@ -1,4 +1,14 @@
+/**
+ * Controller class for extracting expense details from uploaded documents using Gemini AI
+ */
 public with sharing class ExpenseExtractorController {
+    /**
+     * @description Extracts expense details from an uploaded document using Gemini AI
+     * @param contentVersionId The ID of the ContentVersion record containing the document
+     * @param expenseReportId The ID of the Expense Report to associate the extracted details with
+     * @return Map<String, Object> containing the extracted expense details
+     * @throws AuraHandledException if the extraction fails or required parameters are missing
+     */
     @AuraEnabled
     public static Map<String, Object> extractExpenseDetails(String contentVersionId, String expenseReportId) {
         try {
@@ -34,6 +44,11 @@ public with sharing class ExpenseExtractorController {
         }
     }
 
+    /**
+     * @description Creates expense line items based on extracted data
+     * @param params Map containing expense report ID, content version ID, and extracted data
+     * @return Map<String, Object> with success status and message or error details
+     */
     @AuraEnabled
     public static Map<String, Object> createExpenseLineItems(Map<String, Object> params) {
         try {
@@ -55,7 +70,9 @@ public with sharing class ExpenseExtractorController {
             System.debug('Available keys in params: ' + params.keySet());
             
             String expenseReportId = (String)params.get('expenseReportId');
+            String contentVersionId = (String)params.get('contentVersionId');
             System.debug('expenseReportId: ' + expenseReportId);
+            System.debug('contentVersionId: ' + contentVersionId);
             
             Object extractedDataObj = params.get('extractedData');
             System.debug('extractedDataObj: ' + (extractedDataObj != null ? String.valueOf(extractedDataObj) : 'null'));
@@ -107,7 +124,7 @@ public with sharing class ExpenseExtractorController {
             
             // Create the expense line item
             try {
-                createExpenseLineItem(extractedData, expenseReportId);
+                createExpenseLineItem(extractedData, expenseReportId, contentVersionId);
                 System.debug('Successfully created expense line item');
                 return new Map<String, Object>{
                     'isSuccess' => true,
@@ -135,6 +152,13 @@ public with sharing class ExpenseExtractorController {
         }
     }
     
+    /**
+     * @description Makes an API call to Gemini AI to extract expense details from document
+     * @param base64Data Base64 encoded document data
+     * @param fileExtension File extension of the uploaded document
+     * @return Map<String, Object> containing the extracted expense details
+     * @throws AuraHandledException if the API call fails or response parsing fails
+     */
     private static Map<String, Object> callGeminiAPI(String base64Data, String fileExtension) {
         try {
             System.debug('Starting callGeminiAPI method');
@@ -228,7 +252,14 @@ public with sharing class ExpenseExtractorController {
         }
     }
     
-    private static void createExpenseLineItem(Map<String, Object> extractedData, String expenseReportId) {
+    /**
+     * @description Creates a new expense line item record with the extracted data and renames the uploaded file
+     * @param extractedData Map containing the extracted expense details
+     * @param expenseReportId ID of the expense report to associate the line item with
+     * @param contentVersionId ID of the uploaded file to rename
+     * @throws AuraHandledException if required fields are missing or record creation fails
+     */
+    private static void createExpenseLineItem(Map<String, Object> extractedData, String expenseReportId, String contentVersionId) {
         System.debug('Creating expense line item with data: ' + JSON.serialize(extractedData));
         
         // Validate required fields
@@ -240,6 +271,7 @@ public with sharing class ExpenseExtractorController {
         }
         
         try {
+            // Create the expense line item
             Expense_Line_Item__c lineItem = new Expense_Line_Item__c(
                 Expense_Report__c = expenseReportId,
                 Vendor_Name__c = (String)extractedData.get('vendorName'),
@@ -250,8 +282,26 @@ public with sharing class ExpenseExtractorController {
             
             insert lineItem;
             System.debug('Successfully inserted line item: ' + lineItem.Id);
+
+            // Rename the uploaded file
+            if (String.isNotBlank(contentVersionId)) {
+                ContentVersion cv = [SELECT Id, Title, FileExtension 
+                                   FROM ContentVersion 
+                                   WHERE Id = :contentVersionId 
+                                   WITH SECURITY_ENFORCED];
+                
+                // Create a new title based on vendor name and expense date
+                String newTitle = (String)extractedData.get('vendorName') + ' - ' + 
+                                ((String)extractedData.get('expenseDate')).replace('-', '') + 
+                                (String.isNotBlank(cv.FileExtension) ? '.' + cv.FileExtension : '');
+                
+                // Update the ContentVersion title
+                cv.Title = newTitle;
+                update cv;
+                System.debug('Successfully renamed file to: ' + newTitle);
+            }
         } catch (Exception e) {
-            System.debug('Error creating line item: ' + e.getMessage());
+            System.debug('Error creating line item or renaming file: ' + e.getMessage());
             throw new AuraHandledException('Failed to create expense line item: ' + e.getMessage());
         }
     }

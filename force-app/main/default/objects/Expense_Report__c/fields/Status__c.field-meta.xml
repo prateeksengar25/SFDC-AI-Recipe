@@ -30,6 +30,18 @@
                 <default>false</default>
                 <label>Rejected</label>
             </value>
+            <value>
+                <fullName>Error</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Error</label>
+            </value>
+            <value>
+                <fullName>Processing</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Processing</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>

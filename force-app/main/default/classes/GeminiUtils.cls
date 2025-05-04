@@ -1,4 +1,16 @@
+/**
+ * @description Utility class for Gemini AI API operations
+ * This class provides helper methods for interacting with the Gemini AI service
+ */
 public with sharing class GeminiUtils {
+    /**
+     * @description Retrieves a list of available Gemini AI models
+     * Makes an HTTP GET request to the Gemini API to fetch available models
+     * @return String JSON response containing available models or error message
+     * @example
+     * String models = GeminiUtils.listAvailableModels();
+     * System.debug(models);
+     */
     @AuraEnabled
     public static String listAvailableModels() {
         try {
